@@ -77,6 +77,8 @@ public class ZHWaveformView: UIView {
     
     private var assetMutableData: NSMutableData?
     
+    private var activityIndicatorView = UIActivityIndicatorView()
+    
     public init(frame: CGRect, fileURL: URL) {
         self.fileURL = fileURL
         super.init(frame: frame)
@@ -98,11 +100,18 @@ public class ZHWaveformView: UIView {
             )
         } else {
             processAudio()
+            activityIndicatorView.center = CGPoint(x: bounds.midX, y: bounds.midY)
+            addSubview(activityIndicatorView)
         }
     }
     
+    private var isProcessingAudio = false
+    
     private func processAudio() {
-        guard let asset = asset, let track = track else { return }
+        guard !isProcessingAudio, let asset = asset, let track = track else { return }
+        
+        isProcessingAudio = true
+        activityIndicatorView.startAnimating()
         
         let frameSize = frame.size
         
@@ -115,6 +124,7 @@ public class ZHWaveformView: UIView {
                 DispatchQueue.main.async {
                     self.drawTrack(with: CGRect(origin: .zero, size: frame.size), filerSamples: self.trackProcessingCut ?? [])
                     self.waveformDelegate?.waveformViewDrawComplete?(waveformView: self)
+                    self.activityIndicatorView.stopAnimating()
                 }
             }) { (error) in
                 assert(true, error?.localizedDescription ?? "Error, AudioProcessing.bufferRef")
