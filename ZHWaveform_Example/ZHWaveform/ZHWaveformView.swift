@@ -80,25 +80,9 @@ public class ZHWaveformView: UIView {
     public init(frame: CGRect, fileURL: URL) {
         self.fileURL = fileURL
         super.init(frame: frame)
-        waveformDelegate?.waveformViewStartDrawing?(waveformView: self)
         backgroundColor = .white
         asset = AVAsset(url: fileURL)
         track = asset?.tracks(withMediaType: .audio).first
-        
-        if let asset = asset, let track = track {
-            DispatchQueue.global().async {
-                ZHAudioProcessing.bufferRef(asset: asset, track: track, success: { [unowned self] (data) in
-                    self.assetMutableData = data
-                    self.trackProcessingCut = ZHTrackProcessing.cutAudioData(size: frame.size, recorder: data, scale: self.trackScale)
-                    DispatchQueue.main.async {
-                        self.drawTrack(with: CGRect(origin: .zero, size: frame.size), filerSamples: self.trackProcessingCut ?? [])
-                        self.waveformDelegate?.waveformViewDrawComplete?(waveformView: self)
-                    }
-                }) { (error) in
-                    assert(true, error?.localizedDescription ?? "Error, AudioProcessing.bufferRef")
-                }
-            }
-        }
     }
     
     override public func layoutSubviews() {
@@ -112,6 +96,29 @@ public class ZHWaveformView: UIView {
                              height: frame.height),
                 filerSamples: samples
             )
+        } else {
+            processAudio()
+        }
+    }
+    
+    private func processAudio() {
+        guard let asset = asset, let track = track else { return }
+        
+        let frameSize = frame.size
+        
+        waveformDelegate?.waveformViewStartDrawing?(waveformView: self)
+
+        DispatchQueue.global().async {
+            ZHAudioProcessing.bufferRef(asset: asset, track: track, success: { [unowned self] (data) in
+                self.assetMutableData = data
+                self.trackProcessingCut = ZHTrackProcessing.cutAudioData(size: frameSize, recorder: data, scale: self.trackScale)
+                DispatchQueue.main.async {
+                    self.drawTrack(with: CGRect(origin: .zero, size: frame.size), filerSamples: self.trackProcessingCut ?? [])
+                    self.waveformDelegate?.waveformViewDrawComplete?(waveformView: self)
+                }
+            }) { (error) in
+                assert(true, error?.localizedDescription ?? "Error, AudioProcessing.bufferRef")
+            }
         }
     }
     
