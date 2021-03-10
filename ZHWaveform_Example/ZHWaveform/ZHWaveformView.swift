@@ -117,12 +117,14 @@ public class ZHWaveformView: UIView {
         
         waveformDelegate?.waveformViewStartDrawing?(waveformView: self)
 
-        DispatchQueue.global().async {
-            ZHAudioProcessing.bufferRef(asset: asset, track: track, success: { [unowned self] (data) in
+        DispatchQueue.global().async { [weak self] in
+            ZHAudioProcessing.bufferRef(asset: asset, track: track, success: { [weak self] (data) in
+                guard let self = self else { return }
                 self.assetMutableData = data
                 self.trackProcessingCut = ZHTrackProcessing.cutAudioData(size: frameSize, recorder: data, scale: self.trackScale)
-                DispatchQueue.main.async {
-                    self.drawTrack(with: CGRect(origin: .zero, size: frame.size), filerSamples: self.trackProcessingCut ?? [])
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.drawTrack(with: CGRect(origin: .zero, size: self.frame.size), filerSamples: self.trackProcessingCut ?? [])
                     self.waveformDelegate?.waveformViewDrawComplete?(waveformView: self)
                     self.activityIndicatorView.stopAnimating()
                 }
